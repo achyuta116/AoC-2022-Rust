@@ -1,37 +1,52 @@
 use std::{
+    error::Error,
     fs::File,
     io::{self, BufRead},
-    path::Path, error::Error,
+    path::Path,
 };
 
 fn main() -> Result<(), Box<dyn Error>> {
     let path = Path::new("./input.txt");
-    let file = match File::open(&path) {
-        Ok(file) => file,
-        Err(w) => panic!("{}", w),
-    };
+    let file = File::open(&path)?;
 
     let mut lines = io::BufReader::new(file).lines();
 
-    let mut count = 0;
+    let mut stacks: Vec<Vec<char>> = vec![vec![]; 9];
 
+    for _ in 0..8 {
+        let line = lines
+            .next()
+            .unwrap()
+            .unwrap()
+            .chars()
+            .collect::<Vec<char>>();
+        for c in 0..9 {
+            match line[c * 4 + 1] {
+                'A'..='Z' => stacks[c].push(line[c * 4 + 1]),
+                ' ' => (),
+                _ => panic!("Bad Character"),
+            }
+        }
+    }
+    lines.next();
+    lines.next();
+
+    stacks.iter_mut().for_each(|stack| stack.reverse());
     while let Some(Ok(line)) = lines.next() {
-        let (first_pair, second_pair) = line.split_once(",").unwrap();
-        let (first_start, first_end) = first_pair.split_once("-").unwrap();
-        let first_start = first_start.parse::<u32>()?;
-        let first_end = first_end.parse::<u32>()?;
+        let instruction: Vec<_> = line.split(" ").collect();
+        let number = instruction[1].parse::<u32>()?;
+        let from = instruction[3].parse::<usize>()? - 1;
+        let to = instruction[5].parse::<usize>()? - 1;
 
-        let (second_start, second_end) = second_pair.split_once("-").unwrap();
-        let second_start = second_start.parse::<u32>()?;
-        let second_end = second_end.parse::<u32>()?;
-
-        if second_start <= first_start && first_start <= second_end {
-            count += 1;
-        } else if first_start <= second_start && second_start <= first_end {
-            count += 1;
+        for _ in 0..number {
+            let block = stacks[from].pop().unwrap();
+            stacks[to].push(block);
         }
     }
 
-    println!("{}", count);
+    for stack in stacks.iter() {
+        print!("{}", stack.last().unwrap());
+    }
+
     Ok(())
 }
