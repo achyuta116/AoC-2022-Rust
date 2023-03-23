@@ -38,8 +38,14 @@ fn main() -> Result<(), Box<dyn Error>> {
         let from = instruction[3].parse::<usize>()? - 1;
         let to = instruction[5].parse::<usize>()? - 1;
 
+        let mut temp = vec![];
         for _ in 0..number {
             let block = stacks[from].pop().unwrap();
+            temp.push(block);
+        }
+
+        temp.reverse();
+        for block in temp.into_iter() {
             stacks[to].push(block);
         }
     }
