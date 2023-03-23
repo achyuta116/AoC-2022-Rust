@@ -1,5 +1,8 @@
-use std::{path::Path, fs::File, io::{self, BufRead}};
-use std::cmp::max;
+use std::{
+    fs::File,
+    io::{self, BufRead},
+    path::Path,
+};
 
 fn main() {
     let path = Path::new("./input.txt");
@@ -10,19 +13,23 @@ fn main() {
         Err(w) => panic!("{}", w),
     };
 
+    let mut elves = vec![];
+
     let mut current = 0;
-    let mut mx = 0;
     for line in io::BufReader::new(file).lines() {
         if let Ok(ip) = line {
-            println!("{}", ip);
             if let Ok(calorie_count) = ip.parse::<i32>() {
                 current += calorie_count;
             } else {
-                mx = max(mx, current);
+                elves.push(current);
                 current = 0;
             }
         }
     }
 
-    println!("{}", mx);
+    elves.sort();
+    elves.reverse();
+    let top_three_sum: i32 = elves[0..3].iter().sum();
+
+    println!("{}", top_three_sum);
 }
