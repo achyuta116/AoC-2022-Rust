@@ -13,23 +13,31 @@ fn main() {
         Err(w) => panic!("{}", w),
     };
 
-    let mut elves = vec![];
+    let mut score = 0;
 
-    let mut current = 0;
     for line in io::BufReader::new(file).lines() {
         if let Ok(ip) = line {
-            if let Ok(calorie_count) = ip.parse::<i32>() {
-                current += calorie_count;
-            } else {
-                elves.push(current);
-                current = 0;
+            let choices = ip.split_once(" ");
+            if let Some((a, b)) = choices {
+                score += calculate_score(a, b);
             }
         }
     }
 
-    elves.sort();
-    elves.reverse();
-    let top_three_sum: i32 = elves[0..3].iter().sum();
+    println!("{}", score);
+}
 
-    println!("{}", top_three_sum);
+fn calculate_score(a: &str, b: &str) -> i32 {
+    match (a, b) {
+        ("A", "X") => 3 + 1,
+        ("A", "Y") => 6 + 2,
+        ("A", "Z") => 0 + 3,
+        ("B", "X") => 0 + 1,
+        ("B", "Y") => 3 + 2,
+        ("B", "Z") => 6 + 3,
+        ("C", "X") => 6 + 1,
+        ("C", "Y") => 0 + 2,
+        ("C", "Z") => 3 + 3,
+        _ => panic!("Incorrect Combination"),
+    }
 }
