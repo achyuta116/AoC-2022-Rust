@@ -1,5 +1,4 @@
 use std::{
-    collections::HashMap,
     error::Error,
     fs::File,
     io::{self, BufRead},
@@ -10,42 +9,49 @@ fn main() -> Result<(), Box<dyn Error>> {
     let path = Path::new("./input.txt");
     let file = File::open(&path)?;
 
-    let mut message = String::new();
-    io::BufReader::new(file).read_line(&mut message).unwrap();
-    let message = message.chars().collect::<Vec<char>>();
+    let mut lines = io::BufReader::new(&file).lines();
 
-    let mut m: HashMap<char, u32> = HashMap::new();
+    lines.next().unwrap().unwrap();
 
-    let mut found_index = 0;
-    for i in 0..14 {
-        if let Some(ch) = m.get(&message[i]) {
-            m.insert(message[i], ch + 1);
-        } else {
-            m.insert(message[i], 1);
+    let mut st = vec![0];
+    let mut total = 0;
+
+    while let Some(Ok(line)) = lines.next() {
+        let instr: Vec<_> = line
+            .split(" ")
+            .into_iter()
+            .map(|el| el.to_owned())
+            .collect();
+        match instr[0].as_ref() {
+            "$" => {
+                match instr[1].as_ref() {
+                    "ls" => (),
+                    "cd" => {
+                        if instr[2] == ".." {
+                            let fin = *st.last().unwrap();
+                            if fin < 100000 {
+                                total += fin;
+                            }
+                            st.pop();
+                            if let Some(last) = st.last_mut() {
+                                *last += fin;
+                            }
+                        } else {
+                            st.push(0);
+                        }
+                    },
+                    _ => ()
+                }
+            }
+            "dir" => (),
+            _ => {
+                let last = st.last_mut().unwrap();
+                *last = *last + instr[0].parse::<i32>().unwrap();
+            }
         }
     }
 
-    for i in 14..message.len() {
-        if m.keys().len() == 14 {
-            found_index = i;
-            break;
-        }
-
-        let prev = m.get(&message[i - 14]).unwrap();
-        if *prev == 1 {
-            m.remove(&message[i - 14]);
-        } else {
-            m.insert(message[i - 14], prev - 1);
-        }
-
-        if let Some(num) = m.get(&message[i]) {
-            m.insert(message[i], num + 1);
-        } else {
-            m.insert(message[i], 1);
-        }
-    }
-
-    println!("{}", found_index);
+    println!("{}", total);
 
     Ok(())
 }
