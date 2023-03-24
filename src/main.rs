@@ -17,7 +17,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let mut m: HashMap<char, u32> = HashMap::new();
 
     let mut found_index = 0;
-    for i in 0..4 {
+    for i in 0..14 {
         if let Some(ch) = m.get(&message[i]) {
             m.insert(message[i], ch + 1);
         } else {
@@ -25,17 +25,17 @@ fn main() -> Result<(), Box<dyn Error>> {
         }
     }
 
-    for i in 4..message.len() {
-        if m.keys().len() == 4 {
+    for i in 14..message.len() {
+        if m.keys().len() == 14 {
             found_index = i;
             break;
         }
 
-        let prev = m.get(&message[i - 4]).unwrap();
+        let prev = m.get(&message[i - 14]).unwrap();
         if *prev == 1 {
-            m.remove(&message[i - 4]);
+            m.remove(&message[i - 14]);
         } else {
-            m.insert(message[i - 4], prev - 1);
+            m.insert(message[i - 14], prev - 1);
         }
 
         if let Some(num) = m.get(&message[i]) {
