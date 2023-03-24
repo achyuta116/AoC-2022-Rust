@@ -1,4 +1,5 @@
 use std::{
+    collections::HashMap,
     error::Error,
     fs::File,
     io::{self, BufRead},
@@ -9,50 +10,42 @@ fn main() -> Result<(), Box<dyn Error>> {
     let path = Path::new("./input.txt");
     let file = File::open(&path)?;
 
-    let mut lines = io::BufReader::new(file).lines();
+    let mut message = String::new();
+    io::BufReader::new(file).read_line(&mut message).unwrap();
+    let message = message.chars().collect::<Vec<char>>();
 
-    let mut stacks: Vec<Vec<char>> = vec![vec![]; 9];
+    let mut m: HashMap<char, u32> = HashMap::new();
 
-    for _ in 0..8 {
-        let line = lines
-            .next()
-            .unwrap()
-            .unwrap()
-            .chars()
-            .collect::<Vec<char>>();
-        for c in 0..9 {
-            match line[c * 4 + 1] {
-                'A'..='Z' => stacks[c].push(line[c * 4 + 1]),
-                ' ' => (),
-                _ => panic!("Bad Character"),
-            }
-        }
-    }
-    lines.next();
-    lines.next();
-
-    stacks.iter_mut().for_each(|stack| stack.reverse());
-    while let Some(Ok(line)) = lines.next() {
-        let instruction: Vec<_> = line.split(" ").collect();
-        let number = instruction[1].parse::<u32>()?;
-        let from = instruction[3].parse::<usize>()? - 1;
-        let to = instruction[5].parse::<usize>()? - 1;
-
-        let mut temp = vec![];
-        for _ in 0..number {
-            let block = stacks[from].pop().unwrap();
-            temp.push(block);
-        }
-
-        temp.reverse();
-        for block in temp.into_iter() {
-            stacks[to].push(block);
+    let mut found_index = 0;
+    for i in 0..4 {
+        if let Some(ch) = m.get(&message[i]) {
+            m.insert(message[i], ch + 1);
+        } else {
+            m.insert(message[i], 1);
         }
     }
 
-    for stack in stacks.iter() {
-        print!("{}", stack.last().unwrap());
+    for i in 4..message.len() {
+        if m.keys().len() == 4 {
+            found_index = i;
+            break;
+        }
+
+        let prev = m.get(&message[i - 4]).unwrap();
+        if *prev == 1 {
+            m.remove(&message[i - 4]);
+        } else {
+            m.insert(message[i - 4], prev - 1);
+        }
+
+        if let Some(num) = m.get(&message[i]) {
+            m.insert(message[i], num + 1);
+        } else {
+            m.insert(message[i], 1);
+        }
     }
+
+    println!("{}", found_index);
 
     Ok(())
 }
