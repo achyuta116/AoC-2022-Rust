@@ -1,83 +1,65 @@
-use std::{
-    error::Error,
-    fs::File,
-    io::{self, BufRead},
-    path::Path, cmp::min,
-};
+use std::collections::HashSet;
+use std::error::Error;
+use std::fs::read_to_string;
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let path = Path::new("./input.txt");
-    let file = File::open(&path)?;
+    let input = read_to_string("input.txt").unwrap();
 
-    let mut lines = io::BufReader::new(&file).lines();
+    let mut trees = vec![];
 
-    let mut total_occupied = 0;
-    while let Some(Ok(line)) = lines.next() {
-        let (first, _) = line.split_once(" ").unwrap();
-        match first {
-            "$" => continue,
-            "dir" => continue,
-            _ => ()
-        }
-        let first = first.parse::<u32>().unwrap();
-        total_occupied += first;
+    for line in input.lines() {
+        let treeline = line.chars().collect::<Vec<_>>();
+        trees.push(treeline);
     }
 
-    let path = Path::new("./input.txt");
-    let file = File::open(&path)?;
+    let mut visible: HashSet<(u32, u32)> = HashSet::new();
 
-    let mut lines = io::BufReader::new(&file).lines();
-
-    lines.next().unwrap().unwrap();
-
-    let mut st = vec![0];
-    let mut min_dir = 40_000_000;
-
-    while let Some(Ok(line)) = lines.next() {
-        let instr: Vec<_> = line
-            .split(" ")
-            .into_iter()
-            .map(|el| el.to_owned())
-            .collect();
-        match instr[0].as_ref() {
-            "$" => {
-                match instr[1].as_ref() {
-                    "ls" => (),
-                    "cd" => {
-                        if instr[2] == ".." {
-                            if let Some(popped) = st.pop(){
-                                if popped > total_occupied - 40_000_000 {
-                                    min_dir = min(popped, min_dir);
-                                }
-                                *st.last_mut().unwrap() += popped;
-                            }
-                        } else {
-                            st.push(0);
-                        }
-                    },
-                    _ => ()
-                }
+    // l to r
+    for i in 0..trees.len() {
+        visible.insert((i as u32, 0));
+        let mut mx = trees[i][0].to_digit(10).unwrap();
+        for j in 1..trees[0].len() {
+            if trees[i][j].to_digit(10).unwrap() > mx {
+                mx = trees[i][j].to_digit(10).unwrap();
+                visible.insert((i as u32, j as u32));
             }
-            "dir" => (),
-            _ => {
-                let last = st.last_mut().unwrap();
-                *last = *last + instr[0].parse::<u32>().unwrap();
+        }
+    }
+    // r to l
+    for i in 0..trees.len() {
+        visible.insert((i as u32, (trees.len() - 1) as u32));
+        let mut mx = trees[i][trees.len() - 1].to_digit(10).unwrap();
+        for j in (0..trees[0].len() - 1).rev() {
+            if trees[i][j].to_digit(10).unwrap() > mx {
+                mx = trees[i][j].to_digit(10).unwrap();
+                visible.insert((i as u32, j as u32));
+            }
+        }
+    }
+    // u to d
+    for j in 0..trees[0].len() {
+        visible.insert((0, j as u32));
+        let mut mx = trees[0][j].to_digit(10).unwrap();
+        for i in 1..trees.len() {
+            if trees[i][j].to_digit(10).unwrap() > mx {
+                mx = trees[i][j].to_digit(10).unwrap();
+                visible.insert((i as u32, j as u32));
+            }
+        }
+    }
+    // d to u
+    for j in 0..trees.len() {
+        visible.insert(((trees.len() - 1) as u32, j as u32));
+        let mut mx = trees[trees.len() - 1][j].to_digit(10).unwrap();
+        for i in (0..trees[0].len()-1).rev() {
+            if trees[i][j].to_digit(10).unwrap() > mx {
+                mx = trees[i][j].to_digit(10).unwrap();
+                visible.insert((i as u32, j as u32));
             }
         }
     }
 
-    st.reverse();
-    let mut current = 0;
-    for el in st.into_iter() {
-        current += el;
-        if el > total_occupied - 40_000_000 {
-            min_dir = min(el, min_dir);
-        } else if current > total_occupied - 40_000_000{
-            min_dir = min(current, min_dir);
-        }
-    }
-
-    println!("{}", min_dir);
+    println!("{}", visible.len());
 
     Ok(())
 }
