@@ -1,74 +1,57 @@
-use std::cmp::max;
+use std::collections::HashSet;
 use std::error::Error;
 use std::fs::read_to_string;
 
 fn main() -> Result<(), Box<dyn Error>> {
     let input = read_to_string("input.txt").unwrap();
 
-    let mut trees = vec![];
+
+    let  (mut head_x, mut head_y) = (0, 0);
+    let  (mut tail_x, mut tail_y) = (0, 0);
+    let mut positions = HashSet::new();
+    positions.insert((0, 0));
 
     for line in input.lines() {
-        let treeline = line.chars().collect::<Vec<_>>();
-        trees.push(treeline);
-    }
+        let (first, second) = line.split_once(" ").unwrap();
+        let second = second.parse::<u32>().unwrap();
+        let direction = match first {
+            "R" => (1, 0),
+            "L" => (-1, 0),
+            "U" => (0, 1),
+            "D" => (0, -1),
+            _ => panic!("Wrong op!")
+        };
 
-    let mut mx = 1;
-    // l to r
-    for i in 1..trees.len() - 1 {
-        for j in 1..trees[0].len() - 1 {
-            let mut sc = 1;
-            let mut sc_mul = 0;
-            let ht = trees[i][j].to_digit(10).unwrap();
-
-
-            for k in j + 1..trees.len() {
-                if trees[i][k].to_digit(10).unwrap() < ht {
-                    sc_mul += 1;
-                } else {
-                    sc_mul += 1;
-                    break
-                }
+        for _ in 0..second {
+            head_x += direction.0;
+            head_y += direction.1;
+            match (head_x - tail_x, head_y - tail_y) {
+                (-1..=1, -1..=1) => (),
+                (2, 0) => tail_x += 1,
+                (2, 1) => (tail_x, tail_y) = (tail_x + 1,tail_y + 1),
+                (2, 2) => (tail_x, tail_y) = (tail_x + 1,tail_y + 1),
+                (1, 2) => (tail_x, tail_y) = (tail_x + 1,tail_y + 1),
+                (0, 2) => tail_y += 1,
+                (-1, 2) => (tail_x, tail_y) = (tail_x - 1,tail_y + 1),
+                (-2, 2) => (tail_x, tail_y) = (tail_x - 1,tail_y + 1),
+                (-2, 1) => (tail_x, tail_y) = (tail_x - 1,tail_y + 1),
+                (-2, 0) => tail_x -= 1,
+                (-2, -1) => (tail_x, tail_y) = (tail_x - 1,tail_y - 1),
+                (-2, -2) => (tail_x, tail_y) = (tail_x - 1,tail_y - 1),
+                (-1, -2) => (tail_x, tail_y) = (tail_x - 1,tail_y - 1),
+                (0, -2) => tail_y -= 1,
+                (1, -2) => (tail_x, tail_y) = (tail_x + 1, tail_y - 1),
+                (2, -2) => (tail_x, tail_y) = (tail_x + 1, tail_y - 1),
+                (2, -1) => (tail_x, tail_y) = (tail_x + 1, tail_y - 1),
+                _ => panic!("Invalid difference")
             }
-            sc *= sc_mul;
-
-            sc_mul = 0;
-            for k in (0..=j - 1).rev() {
-                if trees[i][k].to_digit(10).unwrap() < ht {
-                    sc_mul += 1;
-                } else {
-                    sc_mul += 1;
-                    break
-                }
-            }
-            sc *= sc_mul;
-
-            sc_mul = 0;
-            for k in i + 1..trees.len() {
-                if trees[k][j].to_digit(10).unwrap() < ht {
-                    sc_mul += 1;
-                } else {
-                    sc_mul += 1;
-                    break
-                }
-            }
-            sc *= sc_mul;
-
-            sc_mul = 0;
-            for k in (0..=i - 1).rev() {
-                if trees[k][j].to_digit(10).unwrap() < ht {
-                    sc_mul += 1;
-                } else {
-                    sc_mul += 1;
-                    break
-                }
-            }
-            sc *= sc_mul;
-
-            mx = max(mx, sc);
+            positions.insert((tail_x, tail_y));
         }
     }
+    
 
-    println!("{}", mx);
+    println!("{}", positions.len());
+
 
     Ok(())
 }
