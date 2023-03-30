@@ -1,4 +1,3 @@
-use std::collections::HashSet;
 use std::error::Error;
 use std::fs::read_to_string;
 
@@ -7,59 +6,40 @@ struct Point(i32, i32);
 
 fn main() -> Result<(), Box<dyn Error>> {
     let input = read_to_string("input.txt").unwrap();
+    let mut input = input.lines();
 
-    let mut head = Point(0, 0);
-    let mut tail = vec![Point(0, 0); 9];
-    let mut positions = HashSet::new();
-    positions.insert((0, 0));
+    let mut i = 0;
+    let mut x = 1;
+    let mut sum = 0;
+    let mut mark = 20;
 
-    for line in input.lines() {
-        let (first, second) = line.split_once(" ").unwrap();
-        let second = second.parse::<u32>().unwrap();
-        let direction = match first {
-            "R" => (1, 0),
-            "L" => (-1, 0),
-            "U" => (0, 1),
-            "D" => (0, -1),
-            _ => panic!("Wrong op!"),
-        };
+    while i <= 220 {
+        let old_x = x;
+        let mut instr = input.next().unwrap().split(" ");
+        let first = instr.next().unwrap().to_owned();
 
-        for _ in 0..second {
-            head.0 += direction.0;
-            head.1 += direction.1;
-            tail[0] = mov_tail(head, tail[0]);
-            for i in 0..8 {
-                tail[i + 1] = mov_tail(tail[i], tail[i + 1]);
+        match first.as_str() {
+            "noop" => {
+                i += 1;
             }
-            positions.insert((tail[8].0, tail[8].1));
+            "addx" => {
+                let second = instr.next().unwrap().parse::<i32>().unwrap();
+                x += second;
+                i += 2;
+            }
+            _ => panic!("Invalid instr!"),
+        }
+
+        if i > mark {
+            sum += old_x * mark;
+            mark += 40;
+        } else if i == mark {
+            sum += x * mark;
+            mark += 40;
         }
     }
 
-    println!("{}", positions.len());
+    println!("{}", sum);
 
     Ok(())
-}
-
-fn mov_tail(head: Point, mut tail: Point) -> Point {
-    match (head.0 - tail.0, head.1 - tail.1) {
-        (-1..=1, -1..=1) => (),
-        (2, 0) => tail.0 += 1,
-        (2, 1) => (tail.0, tail.1) = (tail.0 + 1, tail.1 + 1),
-        (2, 2) => (tail.0, tail.1) = (tail.0 + 1, tail.1 + 1),
-        (1, 2) => (tail.0, tail.1) = (tail.0 + 1, tail.1 + 1),
-        (0, 2) => tail.1 += 1,
-        (-1, 2) => (tail.0, tail.1) = (tail.0 - 1, tail.1 + 1),
-        (-2, 2) => (tail.0, tail.1) = (tail.0 - 1, tail.1 + 1),
-        (-2, 1) => (tail.0, tail.1) = (tail.0 - 1, tail.1 + 1),
-        (-2, 0) => tail.0 -= 1,
-        (-2, -1) => (tail.0, tail.1) = (tail.0 - 1, tail.1 - 1),
-        (-2, -2) => (tail.0, tail.1) = (tail.0 - 1, tail.1 - 1),
-        (-1, -2) => (tail.0, tail.1) = (tail.0 - 1, tail.1 - 1),
-        (0, -2) => tail.1 -= 1,
-        (1, -2) => (tail.0, tail.1) = (tail.0 + 1, tail.1 - 1),
-        (2, -2) => (tail.0, tail.1) = (tail.0 + 1, tail.1 - 1),
-        (2, -1) => (tail.0, tail.1) = (tail.0 + 1, tail.1 - 1),
-        _ => panic!("Invalid difference"),
-    };
-    return tail;
 }
