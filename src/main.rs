@@ -17,6 +17,8 @@ fn main() -> Result<(), Box<dyn Error>> {
     let mut input = input.lines();
     let mut monkeys = vec![];
 
+    let mut mod_constant = 1;
+
     while let Some(mut line) = input.next() {
         line = line.strip_prefix("Monkey ").unwrap();
         line = line.strip_suffix(":").unwrap();
@@ -59,6 +61,8 @@ fn main() -> Result<(), Box<dyn Error>> {
             .parse::<usize>()
             .unwrap();
 
+        mod_constant *= modulus;
+
         monkeys.push(Monkey {
             items,
             operation: first.chars().next().unwrap(),
@@ -75,7 +79,8 @@ fn main() -> Result<(), Box<dyn Error>> {
         input.next();
     }
 
-    for _ in 0..20 {
+
+    for _ in 0..10000 {
         for i in 0..monkeys.len() {
             while let Some(item) = monkeys[i].items.pop() {
                 monkeys[i].inspection += 1;
@@ -84,15 +89,15 @@ fn main() -> Result<(), Box<dyn Error>> {
                     None => item,
                 };
 
-                let mut new = match monkeys[i].operation {
-                    '*' => item * operand,
-                    '+' => item + operand,
-                    _ => panic!("Incorrect Operation")
-                };
+                let modulus = monkeys[i].modulus;
 
-                new /= 3;
-                
-                if new % monkeys[i].modulus == 0 {
+                let new = match monkeys[i].operation {
+                    '*' => (item as i64 * operand as i64) % mod_constant as i64,
+                    '+' => (item as i64 + operand as i64) % mod_constant as i64,
+                    _ => panic!("Incorrect Operation")
+                } as i32;
+
+                if new % modulus  == 0 {
                     let throw = monkeys[i].on_true;
                     monkeys[throw].items.push(new);
                 } else {
@@ -106,7 +111,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let mut inspections = monkeys.iter().map(|x| x.inspection).collect::<Vec<_>>();
     inspections.sort();
     inspections.reverse();
-    println!("{}", inspections[0] * inspections[1]);
+    println!("{}", inspections[0] as i64 * inspections[1] as i64);
 
     Ok(())
 }
