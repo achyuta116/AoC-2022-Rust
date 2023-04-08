@@ -5,12 +5,22 @@ struct Color(i16, i16, i16);
 fn main() -> Result<(), Box<dyn Error>> {
     let fl = include_str!("base.txt");
 
-    let fc = Color(255, 255, 0);
-    let bc = Color(0, 255, 100);
+    let fc = Color(0, 0, 255);
+    let bc = Color(0, 255, 0);
 
     let mut line_count = 0;
     fl.lines().for_each(|_| line_count += 1);
-    let ln = fl.lines().max_by(|x, y| x.len().cmp(&y.len())).unwrap().len();
+    let ln = fl
+        .lines()
+        .map(|l| {
+            l.chars()
+                .enumerate()
+                .map(|(i, c)| (i, c.is_alphanumeric()))
+                .filter(|&(i, is_alphanumeric)| i == 0 || !is_alphanumeric)
+                .count()
+        })
+        .max()
+        .unwrap();
 
     let mut colored = vec![];
     let mut input = fl.lines();
