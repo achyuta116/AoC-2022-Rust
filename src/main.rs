@@ -36,6 +36,9 @@ fn bfs(end: (i32, i32), chars: &Vec<Vec<Item>>) -> usize {
                 if (source as i32 - child as i32 <= 1 && source != 'E')
                     || (source == 'E' && child == 'z')
                 {
+                    if child == 'a' {
+                        return dist + 1;
+                    }
                     chars[xx][yy].visited.set(true);
                     q.push_back((xx as usize, yy as usize, dist + 1));
                 }
