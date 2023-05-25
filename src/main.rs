@@ -58,51 +58,58 @@ fn main() -> Result<(), Box<dyn Error>> {
         }
     }
 
-    let mut count = 0;
     loop {
         struct Pos {
             x: i32,
             y: i32,
         }
-        let mut sand_pos = Pos {
-            x: 500,
-            y: low_x - 8,
-        };
+        let mut sand_pos = Pos { x: 500, y: 0 };
 
         let mut flag = true;
-        while sand_pos.y <= high_x && flag {
+        while sand_pos.y < high_x + 2 {
+            if sand_pos.y == high_x + 1 && scan.get(&(sand_pos.x, sand_pos.y)).is_none() {
+                flag = false;
+                scan.insert((sand_pos.x, sand_pos.y), Particle::Sand);
+                break
+            }
+
             if scan.get(&(sand_pos.x, sand_pos.y + 1)).is_none() {
                 sand_pos.y += 1;
                 continue;
             }
 
             if scan.get(&(sand_pos.x - 1, sand_pos.y + 1)).is_none() {
-                sand_pos.y += 1;
                 sand_pos.x -= 1;
-                continue;
+                sand_pos.y += 1;
+                continue
             }
 
             if scan.get(&(sand_pos.x + 1, sand_pos.y + 1)).is_none() {
-                sand_pos.y += 1;
                 sand_pos.x += 1;
+                sand_pos.y += 1;
                 continue;
             }
 
-            if scan.get(&(sand_pos.x, sand_pos.y)).is_some() {
+            if scan.get(&(sand_pos.x, sand_pos.y)).is_none() {
+                scan.insert((sand_pos.x, sand_pos.y), Particle::Sand);
+                flag = false;
                 break;
             }
 
-            scan.insert((sand_pos.x, sand_pos.y), Particle::Sand);
-            count += 1;
-            flag = false;
+            if sand_pos.x == 500 && sand_pos.y == 0 {
+                break
+            }
         }
 
         if flag {
-            break;
+            break
         }
     }
 
-    println!("{}", count);
+    println!("{}", scan.iter().filter(|(_, &ref v)| match v {
+        Particle::Sand => true,
+        _ => false
+    }).count());
 
     Ok(())
 }
