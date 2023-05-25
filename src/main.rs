@@ -1,77 +1,103 @@
-use std::cell::Cell;
-use std::collections::VecDeque;
 use std::error::Error;
 use std::fs::read_to_string;
+use std::str::Chars;
 
-struct Item {
-    ch: char,
-    visited: Cell<bool>,
+#[derive(Debug)]
+enum ListItem {
+    Integer(i32),
+    List(Vec<ListItem>),
 }
 
-fn bfs(end: (i32, i32), chars: &Vec<Vec<Item>>) -> usize {
-    let mut q = VecDeque::new();
-    let dirs = vec![(0, 1), (0, -1), (1, 0), (-1, 0)];
-    chars[end.0 as usize][end.1 as usize].visited.set(true);
-    q.push_back((end.0 as usize, end.1 as usize, 0));
-    while !q.is_empty() {
-        let (x, y, dist) = q.pop_front().unwrap();
-        let source = chars[x][y].ch;
-
-        for dir in dirs.iter() {
-            let xx = x as i32 + dir.0;
-            let yy = y as i32 + dir.1;
-            if xx >= 0 && xx < chars.len() as i32 && yy >= 0 && yy < chars[0].len() as i32 {
-                let xx = xx as usize;
-                let yy = yy as usize;
-
-                let child = chars[xx][yy].ch;
-                if chars[xx][yy].visited.get() {
-                    continue;
-                }
-
-                if child == 'S' {
-                    return dist + 1;
-                }
-
-                if (source as i32 - child as i32 <= 1 && source != 'E')
-                    || (source == 'E' && child == 'z')
-                {
-                    if child == 'a' {
-                        return dist + 1;
+fn parse_list_item(item: &mut Chars) -> ListItem {
+    let mut ret = vec![];
+    while let Some(ch) = item.next() {
+        match ch {
+            '0'..='9' => {
+                let mut number = String::from(ch);
+                while let Some(ch) = item.next() {
+                    match ch {
+                        ',' => {
+                            ret.push(ListItem::Integer(number.parse::<i32>().unwrap()));
+                            break;
+                        }
+                        ']' => {
+                            ret.push(ListItem::Integer(number.parse::<i32>().unwrap()));
+                            return ListItem::List(ret);
+                        }
+                        '0'..='9' => number.push(ch),
+                        _ => panic!("Invalid Character"),
                     }
-                    chars[xx][yy].visited.set(true);
-                    q.push_back((xx as usize, yy as usize, dist + 1));
+                }
+            }
+            '[' => ret.push(parse_list_item(item)),
+            ']' => break,
+            ',' => continue,
+            _ => panic!("Invalid character"),
+        }
+    }
+    ListItem::List(ret)
+}
+
+fn compare_list_items(left: &ListItem, right: &ListItem) -> Option<bool> {
+    match (left, right) {
+        (ListItem::Integer(l), ListItem::Integer(r)) => {
+            if l == r {
+                None
+            } else {
+                Some(l < r)
+            }
+        }
+        (ListItem::Integer(l), ListItem::List(_)) => compare_list_items(
+            &ListItem::List(vec![ListItem::Integer(l.to_owned())]),
+            right,
+        ),
+        (ListItem::List(_), ListItem::Integer(r)) => {
+            compare_list_items(left, &ListItem::List(vec![ListItem::Integer(r.to_owned())]))
+        }
+        (ListItem::List(l), ListItem::List(r)) => {
+            if l.is_empty() && r.is_empty() {
+                return None;
+            } else if l.is_empty() {
+                return Some(true);
+            } else if r.is_empty() {
+                return Some(false);
+            }
+
+            let mut l = l.iter();
+            let mut r = r.iter();
+            loop {
+                match (l.next(), r.next()) {
+                    (Some(left), Some(right)) => {
+                        if let Some(correct) = compare_list_items(left, right) {
+                            return Some(correct);
+                        }
+                    }
+                    (Some(_), None) => return Some(false),
+                    (None, Some(_)) => return Some(true),
+                    (None, None) => return None,
                 }
             }
         }
     }
-
-    return 0;
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
     let input = read_to_string("input.txt").unwrap();
     let mut input = input.lines();
-    let mut chars: Vec<Vec<Item>> = vec![];
 
-    let mut start: (i32, i32) = (0, 0);
-    let mut lindex = 0 as usize;
+    let mut correct = 0;
+    let mut index = 1;
     while let Some(line) = input.next() {
-        if let Some(index) = line.find("E") {
-            start = (lindex as i32, index as i32);
+        let left = parse_list_item(&mut line.strip_prefix("[").unwrap().chars());
+        let right = parse_list_item(&mut input.next().unwrap().strip_prefix("[").unwrap().chars());
+        input.next();
+        if compare_list_items(&left, &right).unwrap() {
+            correct += index
         }
-
-        chars.push(
-            line.chars()
-                .map(|ch| Item {
-                    ch,
-                    visited: false.into(),
-                })
-                .collect(),
-        );
-        lindex += 1;
+        index += 1;
     }
 
-    println!("{}", bfs(start, &chars));
+    println!("{}", correct);
+
     Ok(())
 }
