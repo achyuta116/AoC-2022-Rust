@@ -1,3 +1,4 @@
+use std::cmp::Ordering;
 use std::error::Error;
 use std::fs::read_to_string;
 use std::str::Chars;
@@ -85,19 +86,47 @@ fn main() -> Result<(), Box<dyn Error>> {
     let input = read_to_string("input.txt").unwrap();
     let mut input = input.lines();
 
-    let mut correct = 0;
-    let mut index = 1;
+    let mut messages = vec![];
+    let divider_two = ListItem::List(vec![ListItem::List(vec![ListItem::Integer(2)])]);
+    let divider_six = ListItem::List(vec![ListItem::List(vec![ListItem::Integer(6)])]);
+    messages.push(divider_two);
+    messages.push(divider_six);
     while let Some(line) = input.next() {
         let left = parse_list_item(&mut line.strip_prefix("[").unwrap().chars());
         let right = parse_list_item(&mut input.next().unwrap().strip_prefix("[").unwrap().chars());
         input.next();
-        if compare_list_items(&left, &right).unwrap() {
-            correct += index
-        }
-        index += 1;
+        messages.push(left);
+        messages.push(right);
     }
 
-    println!("{}", correct);
+    messages.sort_by(|left, right| match compare_list_items(left, right) {
+        Some(true) => Ordering::Less,
+        Some(false) => Ordering::Greater,
+        None => Ordering::Equal,
+    });
+
+    let two_index = messages
+        .iter()
+        .position(|r| {
+            compare_list_items(
+                r,
+                &ListItem::List(vec![ListItem::List(vec![ListItem::Integer(2)])]),
+            )
+            .is_none()
+        })
+        .unwrap();
+    let six_index = messages
+        .iter()
+        .position(|r| {
+            compare_list_items(
+                r,
+                &ListItem::List(vec![ListItem::List(vec![ListItem::Integer(6)])]),
+            )
+            .is_none()
+        })
+        .unwrap();
+
+    println!("{}", (two_index + 1) * (six_index + 1));
 
     Ok(())
 }
