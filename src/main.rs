@@ -1,132 +1,108 @@
-use std::cmp::Ordering;
+use std::collections::HashMap;
 use std::error::Error;
 use std::fs::read_to_string;
-use std::str::Chars;
 
-#[derive(Debug)]
-enum ListItem {
-    Integer(i32),
-    List(Vec<ListItem>),
-}
-
-fn parse_list_item(item: &mut Chars) -> ListItem {
-    let mut ret = vec![];
-    while let Some(ch) = item.next() {
-        match ch {
-            '0'..='9' => {
-                let mut number = String::from(ch);
-                while let Some(ch) = item.next() {
-                    match ch {
-                        ',' => {
-                            ret.push(ListItem::Integer(number.parse::<i32>().unwrap()));
-                            break;
-                        }
-                        ']' => {
-                            ret.push(ListItem::Integer(number.parse::<i32>().unwrap()));
-                            return ListItem::List(ret);
-                        }
-                        '0'..='9' => number.push(ch),
-                        _ => panic!("Invalid Character"),
-                    }
-                }
-            }
-            '[' => ret.push(parse_list_item(item)),
-            ']' => break,
-            ',' => continue,
-            _ => panic!("Invalid character"),
-        }
-    }
-    ListItem::List(ret)
-}
-
-fn compare_list_items(left: &ListItem, right: &ListItem) -> Option<bool> {
-    match (left, right) {
-        (ListItem::Integer(l), ListItem::Integer(r)) => {
-            if l == r {
-                None
-            } else {
-                Some(l < r)
-            }
-        }
-        (ListItem::Integer(l), ListItem::List(_)) => compare_list_items(
-            &ListItem::List(vec![ListItem::Integer(l.to_owned())]),
-            right,
-        ),
-        (ListItem::List(_), ListItem::Integer(r)) => {
-            compare_list_items(left, &ListItem::List(vec![ListItem::Integer(r.to_owned())]))
-        }
-        (ListItem::List(l), ListItem::List(r)) => {
-            if l.is_empty() && r.is_empty() {
-                return None;
-            } else if l.is_empty() {
-                return Some(true);
-            } else if r.is_empty() {
-                return Some(false);
-            }
-
-            let mut l = l.iter();
-            let mut r = r.iter();
-            loop {
-                match (l.next(), r.next()) {
-                    (Some(left), Some(right)) => {
-                        if let Some(correct) = compare_list_items(left, right) {
-                            return Some(correct);
-                        }
-                    }
-                    (Some(_), None) => return Some(false),
-                    (None, Some(_)) => return Some(true),
-                    (None, None) => return None,
-                }
-            }
-        }
-    }
+enum Particle {
+    Sand,
+    Rock,
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
     let input = read_to_string("input.txt").unwrap();
     let mut input = input.lines();
 
-    let mut messages = vec![];
-    let divider_two = ListItem::List(vec![ListItem::List(vec![ListItem::Integer(2)])]);
-    let divider_six = ListItem::List(vec![ListItem::List(vec![ListItem::Integer(6)])]);
-    messages.push(divider_two);
-    messages.push(divider_six);
+    let mut scan: HashMap<(i32, i32), Particle> = HashMap::new();
+    let mut low_x = std::i32::MAX;
+    let mut high_x = std::i32::MIN;
+
     while let Some(line) = input.next() {
-        let left = parse_list_item(&mut line.strip_prefix("[").unwrap().chars());
-        let right = parse_list_item(&mut input.next().unwrap().strip_prefix("[").unwrap().chars());
-        input.next();
-        messages.push(left);
-        messages.push(right);
+        let mut rock_points = line.split(" -> ");
+        let mut first = rock_points.next().unwrap();
+
+        while let Some(second) = rock_points.next() {
+            let (second_x, second_y) = second.split_once(",").unwrap();
+            let (first_x, first_y) = first.split_once(",").unwrap();
+
+            let second_x = second_x.parse::<i32>().unwrap();
+
+            let second_y = second_y.parse::<i32>().unwrap();
+            high_x = std::cmp::max(high_x, second_y);
+            low_x = std::cmp::min(low_x, second_y);
+
+            let first_x = first_x.parse::<i32>().unwrap();
+
+            let first_y = first_y.parse::<i32>().unwrap();
+            high_x = std::cmp::max(high_x, first_y);
+            low_x = std::cmp::min(low_x, first_y);
+
+            if first_x == second_x {
+                let it = if first_y < second_y {
+                    first_y..=second_y
+                } else {
+                    second_y..=first_y
+                };
+                for y in it {
+                    scan.insert((first_x, y), Particle::Rock);
+                }
+            } else if first_y == second_y {
+                let it = if first_x < second_x {
+                    first_x..=second_x
+                } else {
+                    second_x..=first_x
+                };
+                for x in it {
+                    scan.insert((x, first_y), Particle::Rock);
+                }
+            }
+            first = second;
+        }
     }
 
-    messages.sort_by(|left, right| match compare_list_items(left, right) {
-        Some(true) => Ordering::Less,
-        Some(false) => Ordering::Greater,
-        None => Ordering::Equal,
-    });
+    let mut count = 0;
+    loop {
+        struct Pos {
+            x: i32,
+            y: i32,
+        }
+        let mut sand_pos = Pos {
+            x: 500,
+            y: low_x - 8,
+        };
 
-    let two_index = messages
-        .iter()
-        .position(|r| {
-            compare_list_items(
-                r,
-                &ListItem::List(vec![ListItem::List(vec![ListItem::Integer(2)])]),
-            )
-            .is_none()
-        })
-        .unwrap();
-    let six_index = messages
-        .iter()
-        .position(|r| {
-            compare_list_items(
-                r,
-                &ListItem::List(vec![ListItem::List(vec![ListItem::Integer(6)])]),
-            )
-            .is_none()
-        })
-        .unwrap();
+        let mut flag = true;
+        while sand_pos.y <= high_x && flag {
+            if scan.get(&(sand_pos.x, sand_pos.y + 1)).is_none() {
+                sand_pos.y += 1;
+                continue;
+            }
 
-    println!("{}", (two_index + 1) * (six_index + 1));
+            if scan.get(&(sand_pos.x - 1, sand_pos.y + 1)).is_none() {
+                sand_pos.y += 1;
+                sand_pos.x -= 1;
+                continue;
+            }
+
+            if scan.get(&(sand_pos.x + 1, sand_pos.y + 1)).is_none() {
+                sand_pos.y += 1;
+                sand_pos.x += 1;
+                continue;
+            }
+
+            if scan.get(&(sand_pos.x, sand_pos.y)).is_some() {
+                break;
+            }
+
+            scan.insert((sand_pos.x, sand_pos.y), Particle::Sand);
+            count += 1;
+            flag = false;
+        }
+
+        if flag {
+            break;
+        }
+    }
+
+    println!("{}", count);
 
     Ok(())
 }
