@@ -1,117 +1,74 @@
+use std::cell::Cell;
+use std::collections::VecDeque;
 use std::error::Error;
 use std::fs::read_to_string;
 
-#[derive(Debug)]
-struct Monkey {
-    items: Vec<i32>,
-    operation: char,
-    operand: Option<i32>,
-    modulus: i32,
-    on_true: usize,
-    on_false: usize,
-    inspection: i32,
+struct Item {
+    ch: char,
+    visited: Cell<bool>,
+}
+
+fn bfs(end: (i32, i32), chars: &Vec<Vec<Item>>) -> usize {
+    let mut q = VecDeque::new();
+    let dirs = vec![(0, 1), (0, -1), (1, 0), (-1, 0)];
+    chars[end.0 as usize][end.1 as usize].visited.set(true);
+    q.push_back((end.0 as usize, end.1 as usize, 0));
+    while !q.is_empty() {
+        let (x, y, dist) = q.pop_front().unwrap();
+        let source = chars[x][y].ch;
+
+        for dir in dirs.iter() {
+            let xx = x as i32 + dir.0;
+            let yy = y as i32 + dir.1;
+            if xx >= 0 && xx < chars.len() as i32 && yy >= 0 && yy < chars[0].len() as i32 {
+                let xx = xx as usize;
+                let yy = yy as usize;
+
+                let child = chars[xx][yy].ch;
+                if chars[xx][yy].visited.get() {
+                    continue;
+                }
+
+                if child == 'S' {
+                    return dist + 1;
+                }
+
+                if (source as i32 - child as i32 <= 1 && source != 'E')
+                    || (source == 'E' && child == 'z')
+                {
+                    chars[xx][yy].visited.set(true);
+                    q.push_back((xx as usize, yy as usize, dist + 1));
+                }
+            }
+        }
+    }
+
+    return 0;
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
     let input = read_to_string("input.txt").unwrap();
     let mut input = input.lines();
-    let mut monkeys = vec![];
+    let mut chars: Vec<Vec<Item>> = vec![];
 
-    let mut mod_constant = 1;
-
-    while let Some(mut line) = input.next() {
-        line = line.strip_prefix("Monkey ").unwrap();
-        line = line.strip_suffix(":").unwrap();
-        let _ = line.parse::<i32>().unwrap();
-
-        let mut line = input.next().unwrap();
-        let items = line
-            .trim()
-            .strip_prefix("Starting items: ")
-            .unwrap()
-            .split(", ")
-            .collect::<Vec<_>>();
-        let items = items.iter().map(|&x| x.parse::<i32>().unwrap()).collect();
-        line = input.next().unwrap();
-        line = line.trim().strip_prefix("Operation: new = old ").unwrap();
-        let (first, last) = line.split_once(" ").unwrap();
-
-        line = input.next().unwrap();
-        let modulus = line
-            .trim()
-            .strip_prefix("Test: divisible by ")
-            .unwrap()
-            .parse::<i32>()
-            .unwrap();
-
-        line = input.next().unwrap();
-        let on_true = line
-            .trim()
-            .strip_prefix("If true: throw to monkey ")
-            .unwrap()
-            .parse::<usize>()
-            .unwrap();
-
-        line = input.next().unwrap();
-
-        let on_false = line
-            .trim()
-            .strip_prefix("If false: throw to monkey ")
-            .unwrap()
-            .parse::<usize>()
-            .unwrap();
-
-        mod_constant *= modulus;
-
-        monkeys.push(Monkey {
-            items,
-            operation: first.chars().next().unwrap(),
-            modulus,
-            operand: match last.parse() {
-                Ok(i) => Some(i),
-                Err(_) => None,
-            },
-            on_true,
-            on_false,
-            inspection: 0
-        });
-
-        input.next();
-    }
-
-
-    for _ in 0..10000 {
-        for i in 0..monkeys.len() {
-            while let Some(item) = monkeys[i].items.pop() {
-                monkeys[i].inspection += 1;
-                let operand = match monkeys[i].operand {
-                    Some(value) => value,
-                    None => item,
-                };
-
-                let modulus = monkeys[i].modulus;
-
-                let new = match monkeys[i].operation {
-                    '*' => (item as i64 * operand as i64) % mod_constant as i64,
-                    '+' => (item as i64 + operand as i64) % mod_constant as i64,
-                    _ => panic!("Incorrect Operation")
-                } as i32;
-
-                if new % modulus  == 0 {
-                    let throw = monkeys[i].on_true;
-                    monkeys[throw].items.push(new);
-                } else {
-                    let throw = monkeys[i].on_false;
-                    monkeys[throw].items.push(new);
-                }
-            }
+    let mut start: (i32, i32) = (0, 0);
+    let mut lindex = 0 as usize;
+    while let Some(line) = input.next() {
+        if let Some(index) = line.find("E") {
+            start = (lindex as i32, index as i32);
         }
-    }
-    
-    let mut inspections = monkeys.iter().map(|x| x.inspection).collect::<Vec<_>>();
-    inspections.sort();
-    inspections.reverse();
-    println!("{}", inspections[0] as i64 * inspections[1] as i64);
 
+        chars.push(
+            line.chars()
+                .map(|ch| Item {
+                    ch,
+                    visited: false.into(),
+                })
+                .collect(),
+        );
+        lindex += 1;
+    }
+
+    println!("{}", bfs(start, &chars));
     Ok(())
 }
